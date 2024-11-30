@@ -1,37 +1,147 @@
-import Link from "next/link";
+"use client";
+import { useState, useEffect } from "react";
+import Navbar from "~/components/Navbar";
 
 export default function HomePage() {
+  const [timer, setTimer] = useState(3600);
+  const [timerValue, setTimerValue] = useState(3600);
+  const [isRunning, setIsRunning] = useState(false);
+  const [roles] = useState(["Builder", "Programmer", "Project"]);
+  const [student, setStudent] = useState<{ name: string; role: string }>({
+    name: "",
+    role: "Builder"
+  });
+  const [students, setStudents] = useState<{ name: string; role: string }[]>([]);
+  const [playSound, setPlaySound] = useState(false);
+  const [firstRun, setFirstRun] = useState(true);
+
+  useEffect(() => {
+    const playVideo = () => {
+      if (!playSound)
+        return;
+
+      const video = document.querySelector("iframe");
+      if (video) {
+        video.setAttribute("src", "https://www.youtube.com/embed/9XtUlQULRvA?si=4-7PL8mzM6eiI3SY&amp;controls=0&amp;start=9&amp;autoplay=1");
+      }
+      setTimeout(() => {
+        video?.setAttribute("src", "");
+      }, 8000);
+    }
+
+    let interval: NodeJS.Timeout;
+
+    if (isRunning && timer > 0) {
+      interval = setInterval(() => {
+        setTimer(prevTimer => prevTimer - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      setIsRunning(false);
+      playVideo();
+    }
+
+    return () => clearInterval(interval);
+  }, [isRunning, timer, playSound]);
+
+  const startTimer = () => {
+    setTimer(timerValue);
+    setIsRunning(true);
+
+    if (!firstRun) {
+      setStudents(prevStudents =>
+        prevStudents.map(student => {
+          const currentRoleIndex = roles.indexOf(student.role);
+          const nextRoleIndex = (currentRoleIndex + 1) % roles.length;
+          return {
+            name: student.name,
+            role: roles[nextRoleIndex]!
+          };
+        })
+      );
+    }
+
+    if (firstRun) {
+      setFirstRun(false);
+    }
+  };
+
+  const addStudent = () => {
+    const { name, role } = student;
+    if (!name || !role) return;
+
+    setStudents(prevStudents => [...prevStudents, { name, role }]);
+    setStudent({ name: "", role: "Builder" });
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-          Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-        </h1>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-            href="https://create.t3.gg/en/usage/first-steps"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">First Steps →</h3>
-            <div className="text-lg">
-              Just the basics - Everything you need to know to set up your
-              database and authentication.
-            </div>
-          </Link>
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-            href="https://create.t3.gg/en/introduction"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">Documentation →</h3>
-            <div className="text-lg">
-              Learn more about Create T3 App, the libraries it uses, and how to
-              deploy it.
-            </div>
-          </Link>
+    <main className="bg-zinc-900 min-h-screen min-w-screen flex flex-col">
+      <Navbar />
+
+      <iframe className="hidden" width="560" height="315" title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+
+      <section className="mt-8 flex flex-col items-center flex-1">
+        <ul className="flex flex-row gap-4 text-white items-center">
+          <li className="flex flex-col items-center">
+            <span className="text-6xl font-bold">{String(Math.floor(timer / 3600)).padStart(2, '0')}</span>
+            <span className="text-lg">Hours</span>
+          </li>
+          <li className="flex flex-col items-center">
+            <span className="text-4xl font-semibold">:</span>
+          </li>
+          <li className="flex flex-col items-center">
+            <span className="text-6xl font-bold">{String(Math.floor((timer % 3600) / 60)).padStart(2, '0')}</span>
+            <span className="text-lg">Min</span>
+          </li>
+          <li className="flex flex-col items-center">
+            <span className="text-4xl font-semibold">:</span>
+          </li>
+          <li className="flex flex-col items-center">
+            <span className="text-6xl font-bold">{String(timer % 60).padStart(2, '0')}</span>
+            <span className="text-lg">Sec</span>
+          </li>
+        </ul>
+
+        <div className="flex justify-center mt-4">
+          <button onClick={startTimer} className="bg-zinc-500 hover:bg-zinc-600 text-white font-bold py-2 px-4 rounded-full mr-4">Start</button>
+          <button onClick={() => setIsRunning(false)} className="bg-zinc-500 hover:bg-zinc-600 text-white font-bold py-2 px-4 rounded-full">Pause</button>
+          <input type="number" value={timerValue} onChange={(e) => setTimerValue(Number(e.target.value))} className="bg-zinc-500 text-white font-bold py-2 px-4 rounded-full ml-4" min={0} />
+          <div className="flex flex-col items-start">
+            <label className="text-white ml-4">Play sound</label>
+            <input type="checkbox" checked={playSound} onChange={(e) => setPlaySound(e.target.checked)} className="ml-4" />
+          </div>
         </div>
-      </div>
+
+        <div className="flex flex-row gap-2">
+          <input onChange={(e) => setStudent({ ...student, name: e.target.value })} value={student.name} type="text" placeholder="Name" className="bg-zinc-500 text-white font-bold py-2 px-4 rounded-full mt-4" />
+          <select
+            value={student.role}
+            onChange={(e) => setStudent({ ...student, role: e.target.value })}
+            className="bg-zinc-500 text-white font-bold py-2 px-4 rounded-full mt-4"
+          >
+            {roles.map(role => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+          <button onClick={() => addStudent()} className="bg-zinc-500 hover:bg-zinc-600 text-white font-bold py-2 px-4 rounded-full mt-4">Add</button>
+        </div>
+
+        <ul className="w-full flex-1 mt-4 p-4 flex flex-row gap-8">
+          {roles.map(role => (
+            <li key={role} className="w-1/3 bg-zinc-800/75 p-4 rounded-lg">
+              <h2 className="text-white text-xl font-bold">{role}</h2>
+              <hr className="my-2" />
+              <ul className="mt-4">
+                {students.filter(student => student.role === role).map(student => (
+                  <li key={student.name} className="text-white flex flex-row justify-between">
+                    {student.name}
+                    <button onClick={() => { setStudents([...students].filter(s => s.name != student.name)) }} className="text-red-400">Remove</button>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   );
 }
